@@ -1,0 +1,15 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_CLASSES_ROOT\keyboard]
+@="keyboardProtocol"
+"URL Protocol"="keyboardProtocol"
+
+[HKEY_CLASSES_ROOT\keyboard\DefaultIcon]
+@="C:\\windows\\system32\\osk.exe"
+
+[HKEY_CLASSES_ROOT\keyboard\shell]
+
+[HKEY_CLASSES_ROOT\keyboard\shell\open]
+
+[HKEY_CLASSES_ROOT\keyboard\shell\open\command]
+@="\"C:\\windows\\system32\\osk.exe\""

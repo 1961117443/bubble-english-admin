@@ -1,0 +1,141 @@
+// cover some element-ui styles
+
+.el-breadcrumb__inner,
+.el-breadcrumb__inner a {
+  font-weight: 400 !important;
+}
+
+.el-upload {
+  input[type="file"] {
+    display: none !important;
+  }
+}
+
+.el-upload__input {
+  display: none;
+}
+
+.cell {
+  .el-tag {
+    margin-right: 0px;
+  }
+}
+
+.small-padding {
+  .cell {
+    padding-left: 5px;
+    padding-right: 5px;
+  }
+}
+
+.fixed-width {
+  .el-button--mini {
+    padding: 7px 10px;
+    min-width: 60px;
+  }
+}
+
+.status-col {
+  .cell {
+    padding: 0 10px;
+    text-align: center;
+
+    .el-tag {
+      margin-right: 0px;
+    }
+  }
+}
+
+// to fixed https://github.com/ElemeFE/element/issues/2461
+.el-dialog {
+  transform: none;
+  left: 0;
+  position: relative;
+  margin: 0 auto;
+}
+
+// refine element ui upload
+.upload-container {
+  .el-upload {
+    width: 100%;
+
+    .el-upload-dragger {
+      width: 100%;
+      height: 200px;
+    }
+  }
+}
+
+// dropdown
+.el-dropdown-menu {
+  a {
+    display: block
+  }
+}
+
+// fix date-picker ui bug in filter-item
+.el-range-editor.el-input__inner {
+  display: inline-flex !important;
+}
+
+// to fix el-date-picker css style
+.el-range-separator {
+  box-sizing: content-box;
+}
+
+// tabs组件出现蓝色边框问题
+.el-tabs__item:focus.is-active.is-focus:not(:active) {
+  -webkit-box-shadow: none;
+  box-shadow: none;
+}
+
+// 解决element-ui 组件出现蓝色边框问题
+:focus {
+  outline: 0;
+}
+
+// 表格中的输入框样式
+.el-table{
+  .el-input__inner{
+    border: none;
+    // border-bottom: 1px solid;
+    border-bottom: 1px solid #dcdfe6;
+    background-color: aliceblue;
+  }
+
+  .el-input-number{
+    width: 100%;
+  }
+}
+
+// 没有内容的el-tabs
+.el-tabs.no-content{
+  .el-tabs__header{
+    margin: 0px;
+  }
+}
+
+
+////////////只读状态
+.el-input.is-disabled .el-input__inner {
+  background-color: #fff !important;
+  // border-color: #fff !important;
+  color: #000000 !important;
+}
+
+
+.el-textarea.is-disabled .el-textarea__inner {
+  background-color: #fff !important;
+  // border-color: #fff !important;
+  color: #000000 !important;
+}
+
+.el-input.el-input--small.is-disabled.el-input--suffix{
+  .el-input__suffix{
+    display: none !important;
+  }
+}
+
+.el-color-picker__empty::before{
+  content: "\e6df" !important;
+}
