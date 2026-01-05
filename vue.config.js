@@ -49,13 +49,13 @@ module.exports = {
           '^/dev': ''
         }
       },      
-      '/api/qtossminio': {
-        target: 'https://erp.95033.cn',
-        changeOrigin: true,
-        pathRewrite: {
-          '^/api': ''
-        }
-      },
+      // '/api/qtossminio': {
+      //   target: 'https://erp.95033.cn',
+      //   changeOrigin: true,
+      //   pathRewrite: {
+      //     '^/api': ''
+      //   }
+      // },
       // '/tenant-api': {
       //   target: 'https://erptenant.95033.cn/api',
       //   changeOrigin: true,

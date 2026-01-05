@@ -1,12 +1,12 @@
 // 开发环境接口配置
 // JAVA Boot版本对应后端接口地址
 // JAVA Cloud对应网关地址
-const APIURl = 'http://localhost:5100'
+const APIURl = 'http://localhost:8888'
 
 module.exports = {
   APIURl: APIURl,
   timeout: process.env.NODE_ENV === 'development' ? 1000000 : 1000000,
-  WebSocketUrl: process.env.NODE_ENV === 'development' ?  "ws://localhost:5100/api/message/websocket" : process.env.VUE_APP_BASE_WSS,
+  WebSocketUrl: process.env.NODE_ENV === 'development' ?  "ws://localhost:8888/api/message/websocket" : process.env.VUE_APP_BASE_WSS,
   comUploadUrl: process.env.VUE_APP_BASE_API + '/api/file/Uploader',
   comUrl: process.env.VUE_APP_BASE_API,
   // 本地文件预览
