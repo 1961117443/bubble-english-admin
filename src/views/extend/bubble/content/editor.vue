@@ -1,109 +1,108 @@
 <template>
-  <div class="BubbleUnitEditor-container app-container">
-    <el-card shadow="never">
-      <div slot="header" class="clearfix">
-        <span>{{ id ? '编辑 Unit' : '新增 Unit' }}</span>
-        <div style="float:right">
-          <el-button size="small" icon="el-icon-back" @click="$router.back()">返回</el-button>
+  <transition name="el-zoom-in-center">
+    <div class="QT-preview-main" v-loading="loading">
+      <div class="QT-common-page-header">
+        <el-page-header @back="goBack" :content="formTitle" />
+        <div class="options">
+          <template v-if="!readonly">
+            <el-button type="primary" @click="dataFormSubmit(true)" :loading="btnLoading" :disabled="btnLoading">保存</el-button>
+          </template>
+          <el-button @click="goBack()">{{ $t('common.cancelButton') }}</el-button>
         </div>
       </div>
 
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="110px" style="max-width:720px">
-        <el-form-item label="类型" prop="type">
-          <el-select v-model="form.type" placeholder="word/sentence" style="width:100%">
-            <el-option label="word" value="word" />
-            <el-option label="sentence" value="sentence" />
-            <el-option label="knowledge" value="knowledge" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="文本" prop="text">
-          <el-input v-model="form.text" />
-        </el-form-item>
-        <el-form-item label="释义/说明">
-          <el-input v-model="form.meaning" />
-        </el-form-item>
-        <el-form-item label="最小年龄" prop="minAge">
-          <el-input-number v-model="form.minAge" :min="3" :max="8" />
-          <span style="margin-left:10px;color:#909399">（3-8）</span>
-        </el-form-item>
-        <el-form-item label="图片">
-          <UploadFileSingle v-model="form.image" type="bubbleUnitImage" accept="image/*" />
-        </el-form-item>
-        <el-form-item label="音频">
-          <UploadFileSingle v-model="form.audio" type="bubbleUnitAudio" accept="audio/*" />
-        </el-form-item>
-        <el-form-item label="来源视频ID">
-          <el-input v-model="form.videoId" placeholder="可选" />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" :loading="saving" @click="save">保存</el-button>
-          <el-button @click="$router.back()">取消</el-button>
-        </el-form-item>
+      <el-form ref="elForm" :model="dataForm" :rules="rules" label-width="100px" class="main" :disabled="readonly">
+        <el-row :gutter="16">
+          <el-col :span="8">
+            <el-form-item label="类型" prop="type">
+              <el-select v-model="dataForm.type" placeholder="请选择" clearable style="width: 100%">
+                <el-option label="单词" value="word" />
+                <el-option label="句子" value="sentence" />
+                <el-option label="知识" value="knowledge" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="minAge" prop="minAge">
+              <el-input-number v-model="dataForm.minAge" :min="3" :max="8" controls-position="right" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="来源视频" prop="sourceVideoId">
+              <el-input v-model="dataForm.sourceVideoId" placeholder="可选" clearable />
+            </el-form-item>
+          </el-col>
+
+          <el-col :span="24">
+            <el-form-item label="Text" prop="text">
+              <el-input v-model="dataForm.text" placeholder="例如: panda" clearable />
+            </el-form-item>
+          </el-col>
+
+          <el-col :span="24">
+            <el-form-item label="释义" prop="meaning">
+              <el-input v-model="dataForm.meaning" placeholder="例如: 熊猫" clearable />
+            </el-form-item>
+          </el-col>
+
+          <el-col :span="24">
+            <el-form-item label="Assets" prop="assetsJson">
+              <el-input v-model="dataForm.assetsJson" type="textarea" :rows="6" placeholder='JSON，例如 {"audio":"/xx.mp3","image":"/xx.png"}' />
+            </el-form-item>
+          </el-col>
+        </el-row>
       </el-form>
-    </el-card>
-  </div>
+    </div>
+  </transition>
 </template>
 
 <script>
-import UploadFileSingle from '@/components/Upload/UploadFileSingle'
-import { getUnit, createUnit, updateUnit } from '@/api/extend/bubble/unit'
+import mixins from '@/mixins/viewgrid/form.js'
 
 export default {
-  name: 'bubbleUnitEditor',
-  components: { UploadFileSingle },
+  name: 'BubbleAdminUnitForm',
+  mixins: [mixins],
   data() {
     return {
-      id: this.$route.query.id || '',
-      loading: false,
-      saving: false,
-      form: {
+      dataForm: {
+        id: undefined,
         type: 'word',
         text: '',
         meaning: '',
         minAge: 3,
-        image: '',
-        audio: '',
-        videoId: ''
+        assetsJson: '',
+        sourceVideoId: ''
       },
       rules: {
         type: [{ required: true, message: '请选择类型', trigger: 'change' }],
-        text: [{ required: true, message: '请输入文本', trigger: 'blur' }],
-        minAge: [{ required: true, message: '请输入最小年龄', trigger: 'change' }]
+        text: [{ required: true, message: '请输入Text', trigger: 'blur' }],
+        minAge: [{ required: true, message: '请输入minAge', trigger: 'change' }]
       }
     }
   },
-  created() {
-    if (this.id) this.load()
-  },
   methods: {
-    async load() {
-      this.loading = true
-      try {
-        const res = await getUnit(this.id)
-        this.form = { ...this.form, ...(res.data || res) }
-      } finally {
-        this.loading = false
+    onInitAfter(data) {
+      // 兼容后端返回 JSON 对象
+      if (data.assetsJson && typeof data.assetsJson === 'object') {
+        this.dataForm.assetsJson = JSON.stringify(data.assetsJson, null, 2)
       }
     },
-    save() {
-      this.$refs.formRef.validate(async valid => {
-        if (!valid) return
-        this.saving = true
-        try {
-          if (this.id) {
-            await updateUnit(this.id, this.form)
-          } else {
-            const res = await createUnit(this.form)
-            const id = (res.data && res.data.id) || res.id
-            if (id) this.id = id
+    onSubmitBefore(payload) {
+      if (payload.assetsJson && typeof payload.assetsJson === 'string') {
+        const t = payload.assetsJson.trim()
+        if (t) {
+          try {
+            payload.assetsJson = JSON.parse(t)
+          } catch (e) {
+            this.$message.warning('AssetsJson 不是合法 JSON，将按字符串提交')
           }
-          this.$message.success('已保存')
-          this.$router.back()
-        } finally {
-          this.saving = false
         }
-      })
+      }
+      return true
     }
   }
 }
 </script>
+
+<style lang="scss" scoped>
+</style>

@@ -1,113 +1,118 @@
 <template>
-  <div class="BubbleAiJob-container app-container">
-    <el-card shadow="never">
-      <div slot="header" class="clearfix">
-        <span>AI 分析任务</span>
-      </div>
+  <div class="QT-common-layout">
+    <div class="QT-common-layout-center">
+      <el-row class="QT-common-search-box" :gutter="16">
+        <el-form @submit.native.prevent="">
+          <el-col :span="6">
+            <el-form-item label="状态">
+              <el-select v-model="query.status" clearable placeholder="全部" style="width: 100%">
+                <el-option label="排队中" value="queued" />
+                <el-option label="处理中" value="processing" />
+                <el-option label="成功" value="success" />
+                <el-option label="失败" value="failed" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="6">
+            <el-form-item label="视频ID">
+              <el-input v-model="query.videoId" placeholder="可选" clearable />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item>
+              <el-button type="primary" icon="el-icon-search" @click="search()">查询</el-button>
+              <el-button icon="el-icon-refresh-right" @click="reset()">重置</el-button>
+            </el-form-item>
+          </el-col>
+        </el-form>
+      </el-row>
 
-      <el-form :inline="true" :model="query" size="small" class="qt-search">
-        <el-form-item label="状态">
-          <el-select v-model="query.status" clearable placeholder="全部" style="width:160px">
-            <el-option label="处理中" value="processing" />
-            <el-option label="成功" value="success" />
-            <el-option label="失败" value="failed" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="视频ID">
-          <el-input v-model="query.videoId" placeholder="可选" style="width:200px" clearable />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" icon="el-icon-search" @click="load">查询</el-button>
-          <el-button icon="el-icon-refresh" @click="reset">重置</el-button>
-        </el-form-item>
-      </el-form>
-
-      <el-table :data="rows" v-loading="loading" border size="mini">
-        <el-table-column prop="id" label="任务ID" min-width="160" />
-        <el-table-column prop="videoId" label="视频ID" min-width="140" />
-        <el-table-column prop="status" label="状态" width="110">
-          <template slot-scope="scope">
-            <el-tag :type="tagType(scope.row.status)" size="mini">{{ statusText(scope.row.status) }}</el-tag>
+      <div class="QT-common-layout-main QT-flex-main" v-loading="listLoading">
+        <QT-table v-loading="listLoading" :data="list">
+          <template #actions>
+            <div class="QT-common-head">
+              <div>
+                <el-alert
+                  title="AI 拆解任务（只读）。失败任务可重试，详情可查看 Prompt / 输出 JSON / 错误信息。"
+                  type="info"
+                  :closable="false"
+                  show-icon
+                />
+              </div>
+            </div>
           </template>
-        </el-table-column>
-        <el-table-column prop="model" label="模型" width="140" />
-        <el-table-column prop="cost" label="成本" width="100" />
-        <el-table-column prop="createdAt" label="创建时间" width="170" />
-        <el-table-column label="操作" width="180" fixed="right">
-          <template slot-scope="scope">
-            <el-button type="text" size="mini" @click="openDetail(scope.row)">详情</el-button>
-            <el-button type="text" size="mini" :disabled="scope.row.status!=='failed'" @click="retry(scope.row)">重试</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
 
-      <div class="qt-page">
-        <el-pagination
-          background
-          layout="total, prev, pager, next, sizes"
+          <el-table-column prop="id" label="任务ID" min-width="170" />
+          <el-table-column prop="videoId" label="视频ID" min-width="120" />
+          <el-table-column prop="status" label="状态" width="110">
+            <template slot-scope="scope">
+              <el-tag :type="tagType(scope.row.status)" size="mini">{{ statusText(scope.row.status) }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="retryCount" label="重试" width="80" />
+          <el-table-column prop="createdAt" label="创建时间" width="170" />
+          <el-table-column prop="updatedAt" label="更新时间" width="170" />
+
+          <el-table-column label="操作" fixed="right" width="180">
+            <template slot-scope="scope">
+              <el-button type="text" @click="openDetail(scope.row)">详情</el-button>
+              <el-button
+                type="text"
+                :disabled="scope.row.status !== 'failed'"
+                @click="retry(scope.row)"
+              >重试</el-button>
+            </template>
+          </el-table-column>
+        </QT-table>
+
+        <pagination
           :total="total"
-          :page-size="query.pageSize"
-          :current-page="query.page"
-          @size-change="onSizeChange"
-          @current-change="onPageChange" />
+          :page.sync="listQuery.currentPage"
+          :limit.sync="listQuery.pageSize"
+          @pagination="initData"
+          hide-on-single-page
+        />
       </div>
-    </el-card>
+    </div>
 
-    <el-dialog title="任务详情" :visible.sync="detailVisible" width="820px" :close-on-click-modal="false">
-      <AiJobDetail v-if="detailVisible" :job-id="detailId" />
-    </el-dialog>
+    <QT-Form v-if="formVisible" ref="QTForm" @refresh="refresh" />
   </div>
 </template>
 
 <script>
-import { listJobs, retryJob } from '@/api/extend/bubble/aiJob'
-import AiJobDetail from './parts/JobDetail.vue'
+import request from '@/utils/request'
+import mixins from '@/mixins/viewgrid/index.js'
+import QTForm from './Form.vue'
 
 export default {
   name: 'BubbleAiJobs',
-  components: { AiJobDetail },
+  components: { QTForm },
+  mixins: [mixins],
   data() {
     return {
-      loading: false,
-      rows: [],
-      total: 0,
-      query: { page: 1, pageSize: 10, status: '', videoId: '' },
-      detailVisible: false,
-      detailId: ''
+      controller: '/api/bubble/admin/BubbleAdminAiJob',
+      query: {
+        status: '',
+        videoId: ''
+      }
     }
   },
-  created() {
-    this.load()
-  },
   methods: {
-    async load() {
-      this.loading = true
-      try {
-        const res = await listJobs(this.query)
-        const data = res.data || res
-        this.rows = data.list || data.items || []
-        this.total = data.total || 0
-      } finally {
-        this.loading = false
-      }
-    },
-    reset() {
-      this.query = { page: 1, pageSize: 10, status: '', videoId: '' }
-      this.load()
-    },
-    onPageChange(p) { this.query.page = p; this.load() },
-    onSizeChange(s) { this.query.pageSize = s; this.query.page = 1; this.load() },
     openDetail(row) {
-      this.detailId = row.id
-      this.detailVisible = true
+      this.addOrUpdateHandle(row.id, true)
     },
     async retry(row) {
-      await this.$confirm('确定重试该任务？失败日志将保留。', '提示')
-      await retryJob(row.id)
+      await this.$confirm('确定重试该任务？', '提示', { type: 'warning' })
+      await request({
+        url: `${this.controller}/actions/retry`,
+        method: 'POST',
+        data: { id: row.id }
+      })
       this.$message.success('已提交重试')
-      this.load()
+      this.initData()
     },
     statusText(v) {
+      if (v === 'queued') return '排队中'
       if (v === 'processing') return '处理中'
       if (v === 'success') return '成功'
       if (v === 'failed') return '失败'
@@ -115,7 +120,7 @@ export default {
     },
     tagType(v) {
       if (v === 'success') return 'success'
-      if (v === 'processing') return 'warning'
+      if (v === 'processing' || v === 'queued') return 'warning'
       if (v === 'failed') return 'danger'
       return ''
     }
@@ -124,6 +129,4 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.qt-search { margin-bottom: 10px; }
-.qt-page { margin-top: 10px; text-align: right; }
 </style>
