@@ -49,9 +49,9 @@
               <el-tag :type="tagType(scope.row.status)" size="mini">{{ statusText(scope.row.status) }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="retryCount" label="重试" width="80" />
-          <el-table-column prop="createdAt" label="创建时间" width="170" />
-          <el-table-column prop="updatedAt" label="更新时间" width="170" />
+          <el-table-column prop="startedAt" label="开始时间" width="170" />
+          <el-table-column prop="finishedAt" label="结束时间" width="170" />
+          <el-table-column prop="createTime" label="创建时间" width="170" />
 
           <el-table-column label="操作" fixed="right" width="180">
             <template slot-scope="scope">
@@ -90,7 +90,7 @@ export default {
   mixins: [mixins],
   data() {
     return {
-      controller: '/api/bubble/admin/BubbleAdminAiJob',
+      controller: '/api/bubble/admin/AiJob',
       query: {
         status: '',
         videoId: ''

@@ -35,8 +35,22 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="视频文件" prop="fileUrl">
-              <UploadFileSingle v-model="dataForm.fileUrl" type="bubbleVideo" accept="video/*" />
-              <div class="tip">上传后返回文件名（或URL），后端据此进行 AI 分析。</div>
+              <el-upload
+                class="uploader"
+                action="#"
+                :auto-upload="false"
+                :limit="1"
+                :file-list="fileList"
+                accept="video/*"
+                :on-change="onFileChange"
+                :on-remove="onFileRemove"
+              >
+                <el-button size="small" icon="el-icon-upload">选择视频</el-button>
+                <div slot="tip" class="tip">
+                  说明：这里不走通用文件中心上传，而是随“保存”一起上传到 BubbleEnglish 的本地目录，确保 ASR/AI 可直接读取。
+                </div>
+              </el-upload>
+              <div v-if="dataForm.fileUrl" class="tip">已保存的文件：{{ dataForm.fileUrl }}</div>
             </el-form-item>
           </el-col>
           <el-col :span="24">
@@ -52,14 +66,16 @@
 
 <script>
 import mixins from '@/mixins/viewgrid/form.js'
-import UploadFileSingle from '@/components/Upload/UploadFileSingle.vue'
+import request from '@/utils/request'
 
 export default {
   name: 'BubbleAdminVideoForm',
-  components: { UploadFileSingle },
   mixins: [mixins],
   data() {
     return {
+      controller: '/api/bubble/admin/Video',
+      fileList: [],
+      fileRaw: null,
       dataForm: {
         id: undefined,
         title: '',
@@ -74,6 +90,79 @@ export default {
         ageRange: [{ required: true, message: '请选择适龄', trigger: 'change' }],
         fileUrl: [{ required: true, message: '请先上传视频文件', trigger: 'change' }]
       }
+    }
+  },
+  methods: {
+    onFileChange(file, fileList) {
+      // 仅保留最后一个
+      this.fileList = (fileList || []).slice(-1)
+      this.fileRaw = file && file.raw ? file.raw : null
+      // 给校验字段一个“已选择”占位（实际保存后会变成后端返回的 fileUrl）
+      if (this.fileRaw) this.dataForm.fileUrl = this.fileRaw.name
+    },
+    onFileRemove() {
+      this.fileList = []
+      this.fileRaw = null
+      this.dataForm.fileUrl = ''
+    },
+    // 覆盖 mixin 的提交：新增使用 multipart 上传 + 创建；编辑仍走 JSON
+    dataFormSubmit() {
+      this.$refs['elForm'].validate(async (valid) => {
+        if (!valid) return
+
+        this.btnLoading = true
+        try {
+          if (!this.dataForm.id) {
+            if (!this.fileRaw) {
+              this.$message.error('请先选择视频文件')
+              return
+            }
+            const fd = new FormData()
+            fd.append('title', this.dataForm.title || '')
+            fd.append('themeKey', this.dataForm.themeKey || '')
+            fd.append('ageRange', this.dataForm.ageRange || '')
+            fd.append('remark', this.dataForm.remark || '')
+            fd.append('file', this.fileRaw)
+
+            const res = await request({
+              url: `${this.controller}/actions/createWithUpload`,
+              method: 'POST',
+              data: fd,
+              headers: { 'Content-Type': 'multipart/form-data' }
+            })
+
+            this.$message({
+              message: res.msg || '保存成功',
+              type: 'success',
+              duration: 1000,
+              onClose: () => {
+                this.visible = false
+                this.$emit('refresh', true)
+              }
+            })
+          } else {
+            // 编辑：沿用原来的 JSON 更新
+            const data = JSON.parse(JSON.stringify(this.dataForm))
+            const { submit } = this.getApi()
+            await request({
+              url: `${submit}/${this.dataForm.id}`,
+              method: 'PUT',
+              data
+            })
+            this.$message({
+              message: '保存成功',
+              type: 'success',
+              duration: 1000,
+              onClose: () => {
+                this.visible = false
+                this.$emit('refresh', true)
+              }
+            })
+          }
+        } finally {
+          this.btnLoading = false
+        }
+      })
     }
   }
 }

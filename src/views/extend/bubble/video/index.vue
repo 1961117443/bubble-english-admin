@@ -54,13 +54,24 @@
               <el-tag :type="statusTagType(scope.row.status)" size="mini">{{ statusText(scope.row.status) }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="createTime" label="创建时间" width="170" align="left" />
+          <el-table-column prop="createTime" label="创建时间" width="170" align="left" :formatter="qt.tableDateFormatFull" />
 
-          <el-table-column label="操作" fixed="right" width="240">
+          <el-table-column label="操作" fixed="right" width="360">
             <template slot-scope="scope">
               <el-button type="text" @click="addOrUpdateHandle(scope.row.id, true)">详情</el-button>
               <el-button type="text" @click="addOrUpdateHandle(scope.row.id)" v-has="'btn_edit'">编辑</el-button>
-              <el-button type="text" :disabled="scope.row.status === 'analyzing'" @click="analyze(scope.row)">AI分析</el-button>
+              <el-dropdown trigger="click" @command="(cmd) => onAction(cmd, scope.row)" style="margin: 0 6px;">
+                <span class="el-dropdown-link">
+                  <el-button type="text">流水线<i class="el-icon-arrow-down el-icon--right" /></el-button>
+                </span>
+                <el-dropdown-menu slot="dropdown">
+                  <el-dropdown-item command="asr">1) ASR 字幕</el-dropdown-item>
+                  <el-dropdown-item command="analyze">2) AI 分析</el-dropdown-item>
+                  <el-dropdown-item command="unitAudio">3) Unit 音频</el-dropdown-item>
+                  <el-dropdown-item divided command="run">一键 Run(ASR→AI→音频)</el-dropdown-item>
+                </el-dropdown-menu>
+              </el-dropdown>
+              <el-button type="text" :disabled="scope.row.status === 'analyzing'" @click="analyze(scope.row)">AI分析(旧)</el-button>
               <el-button type="text" class="QT-table-delBtn" @click="handleDel(scope.row.id)" v-has="'btn_remove'">删除</el-button>
             </template>
           </el-table-column>
@@ -91,6 +102,7 @@ export default {
   data() {
     return {
       controller: '/api/bubble/admin/Video',
+      pipelineController: '/api/bubble/admin/Pipeline',
       query: {
         keyword: '',
         themeKey: '',
@@ -124,10 +136,56 @@ export default {
       await this.$request({
         url: `${this.controller}/actions/analyze`,
         method: 'post',
-        data: { id: row.id }
+        data: { videoId: row.id }
       })
       this.$message.success('已提交 AI 分析')
       this.initData()
+    },
+    async onAction(cmd, row) {
+      if (!row || !row.id) return
+      const videoId = row.id
+      if (cmd === 'asr') {
+        await this.$confirm('确认生成 ASR 字幕（whisper）？', '提示', { type: 'warning' })
+        await this.$request({
+          url: `${this.pipelineController}/actions/asr`,
+          method: 'post',
+          data: { videoId }
+        })
+        this.$message.success('已提交 ASR 任务')
+        this.initData()
+        return
+      }
+      if (cmd === 'analyze') {
+        await this.$confirm('确认发起 AI 分析（Pipeline）？', '提示', { type: 'warning' })
+        await this.$request({
+          url: `${this.pipelineController}/actions/analyze`,
+          method: 'post',
+          data: { videoId }
+        })
+        this.$message.success('已提交 AI 分析任务')
+        this.initData()
+        return
+      }
+      if (cmd === 'unitAudio') {
+        await this.$confirm('确认生成 Unit 音频（sentence切片 + word TTS）？', '提示', { type: 'warning' })
+        await this.$request({
+          url: `${this.pipelineController}/actions/unit-audio`,
+          method: 'post',
+          data: { videoId }
+        })
+        this.$message.success('已提交 Unit 音频任务')
+        return
+      }
+      if (cmd === 'run') {
+        await this.$confirm('确认一键 Run（ASR→AI→音频）？', '提示', { type: 'warning' })
+        await this.$request({
+          url: `${this.pipelineController}/actions/run`,
+          method: 'post',
+          data: { videoId }
+        })
+               this.$message.success('已提交流水线 Run')
+        this.initData()
+      }
     }
   }
 }

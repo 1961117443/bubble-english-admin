@@ -35,14 +35,14 @@
           </el-col>
 
           <el-col :span="12">
-            <el-form-item label="重试次数">
-              <el-input v-model="dataForm.retryCount" readonly />
+            <el-form-item label="模型">
+              <el-input v-model="dataForm.model" readonly />
             </el-form-item>
           </el-col>
 
           <el-col :span="24">
-            <el-form-item label="Prompt">
-              <el-input v-model="dataForm.prompt" type="textarea" :rows="6" readonly />
+            <el-form-item label="Prompt(自定义)">
+              <el-input v-model="dataForm.prompt" type="textarea" :rows="4" readonly />
             </el-form-item>
           </el-col>
 
@@ -72,27 +72,50 @@ export default {
   mixins: [mixins],
   data() {
     return {
+      controller: '/api/bubble/admin/AiJob',
       // 只读详情，不做编辑
       dataForm: {
         id: undefined,
         videoId: '',
         status: '',
-        retryCount: 0,
+        model: '',
         prompt: '',
-        resultJson: '',
+        outputJson: '',
         errorMessage: ''
       },
       resultText: ''
     }
   },
   methods: {
+    // 覆盖 mixin 默认的详情读取（AiJob 的 detail 是 query 参数，不是 /{id}）
+    async init(id, readonly) {
+      this.dataForm.id = id || undefined
+      this.readonly = true
+      this.visible = true
+      this.loading = true
+      try {
+        if (!id) {
+          this.loading = false
+          return
+        }
+        const res = await request({
+          url: `${this.controller}/detail`,
+          method: 'GET',
+          params: { id }
+        })
+        this.dataForm = res.data
+        this.onInitAfter(this.dataForm, 'update')
+      } finally {
+        this.loading = false
+      }
+    },
     async onInit(id, readonly) {
       // 强制只读
       this.readonly = true
     },
     onInitAfter(data) {
-      // 兼容后端字段命名（ResultJson / resultJson）
-      const raw = data.resultJson || data.ResultJson || ''
+      // 后端字段：outputJson
+      const raw = data.outputJson || ''
       try {
         if (!raw) {
           this.resultText = ''

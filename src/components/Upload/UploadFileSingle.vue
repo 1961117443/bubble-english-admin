@@ -1,6 +1,6 @@
 <template>
   <div class="UploadFile-container">
-    <el-upload :action="define.comUploadUrl+'/'+type" :headers="uploadHeaders"
+    <el-upload :action="actionUrl" :headers="uploadHeaders"
       :on-preview="handlePreview" :on-remove="handleRemove" :before-remove="beforeRemove"
       :on-success="handleSuccess" :file-list="fileList" :accept="accept">
       <el-button size="small" icon="el-icon-upload">选择文件</el-button>
@@ -13,6 +13,11 @@ import { getDownloadUrl } from '@/api/common'
 export default {
   name: 'UploadFileSingle',
   props: {
+    // 自定义上传地址（优先级高于 define.comUploadUrl+'/'+type）
+    action: {
+      type: String,
+      default: ''
+    },
     value: {
       type: String,
       default: ''
@@ -30,6 +35,12 @@ export default {
     return {
       fileList: [],
       uploadHeaders: { Authorization: this.$store.getters.token }
+    }
+  },
+  computed: {
+    actionUrl() {
+      // define 在 main.js 注入到 Vue.prototype
+      return this.action || (this.define.comUploadUrl + '/' + this.type)
     }
   },
   watch: {
